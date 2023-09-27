@@ -11,6 +11,16 @@ resource "aws_s3_bucket" "vault_resources" {
   )
 }
 
+resource "aws_s3_bucket" "handle_external_dns" {
+  bucket = "handle_external_dns"
+  acl    = "public-read"
+
+  tags = {
+    Name        = "handle_external_dns"
+    Environment = "Dev"
+  }
+}
+
 resource "aws_s3_bucket_policy" "vault_resources" {
   bucket = aws_s3_bucket.vault_resources.id
   policy = data.aws_iam_policy_document.s3_vault_resources_bucket_policy.json
