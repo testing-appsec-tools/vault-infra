@@ -1,0 +1,44 @@
+name: 'Deploy Infrastructure'
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-20.04
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: terraform/environments/prod
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS
+        run: |
+
+          curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL" | jq -r '.value' > $AWS_WEB_IDENTITY_TOKEN_FILE
+
+      - uses: aws-actions/configure-aws-credentials@v1
+        name: Assume STS credentials - prod
+        with:
+          aws-region: us-east-1
+          role-to-assume: GithubActionProdRole
+          web-identity-token-file: /tmp/awscreds
+          role-duration-seconds: 1200
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Terraform Init
+        run: terraform init -backend-config=backend.conf
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -var is_github_action=true
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var is_github_action=true
